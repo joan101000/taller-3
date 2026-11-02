@@ -1,4 +1,3 @@
-
 <?php
 // Página principal del sistema
 $titulo = "Sistema de Gestión de Fallas";

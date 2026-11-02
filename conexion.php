@@ -1,49 +1,47 @@
-
 <?php
 
 // Archivo: conexion.php
-// Conexión a la base de datos del sistema
+// Conexión de PHP con MariaDB utilizando PDO.
 
-function conectarBD() {
+function conectarBD(): PDO
+{
+    // Obtener los datos de conexión desde Docker.
+    $servidor = getenv("DB_HOST");
+    $baseDatos = getenv("DB_NAME");
+    $usuario = getenv("DB_USER");
+    $contrasena = getenv("DB_PASSWORD");
 
-    // Datos de conexión
-    $servidor = "127.0.0.1";
-    $baseDatos = "gestion_fallas";
-
-    // Pendientes hasta tener un servidor autorizado
-    $usuario = "";
-    $contrasena = "";
-
-    // Evitar conexiones sin configurar
-    if ($usuario === "") {
-        throw new Exception(
-            "La conexión está pendiente de configuración."
+    // Verificar la configuración.
+    if (
+        !$servidor ||
+        !$baseDatos ||
+        !$usuario ||
+        !$contrasena
+    ) {
+        throw new RuntimeException(
+            "La conexión a la base de datos no está configurada."
         );
     }
 
     try {
-
-        // Crear conexión utilizando PDO
         $conexion = new PDO(
             "mysql:host=$servidor;dbname=$baseDatos;charset=utf8mb4",
             $usuario,
-            $contrasena
-        );
-
-        // Activar el control de errores
-        $conexion->setAttribute(
-            PDO::ATTR_ERRMODE,
-            PDO::ERRMODE_EXCEPTION
+            $contrasena,
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false
+            ]
         );
 
         return $conexion;
 
     } catch (PDOException $error) {
-
-        throw new Exception(
-            "No fue posible conectar con la base de datos."
+        throw new RuntimeException(
+            "No fue posible conectar con la base de datos.",
+            0,
+            $error
         );
     }
 }
-
-?>

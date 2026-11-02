@@ -1,243 +1,225 @@
-
 <?php
+require_once __DIR__ . '/conexion.php';
 
-// Archivo: actualizar.php
-// Actualiza un reporte de fallas existente.
+function mostrarError(string $mensaje, int $estado = 400, int $id = 0): void
+{
+    http_response_code($estado);
 
-require_once "conexion.php";
+    $mensaje = htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8');
+    $enlace = $id > 0 ? 'editar.php?id=' . $id : 'listar.php';
+    $textoEnlace = $id > 0 ? 'Volver a editar' : 'Volver a reportes';
+    ?>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>No se pudo actualizar el reporte</title>
 
-// Solo aceptar datos enviados por POST
-if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    http_response_code(405);
+        <style>
+            body {
+                background-color: #f1f5f9;
+                color: #172033;
+                font-family: Arial, sans-serif;
+                min-height: 100vh;
+                padding: 30px 15px;
+            }
 
-    exit("Acceso no permitido.");
+            .contenedor {
+                max-width: 580px;
+                margin: 60px auto;
+            }
 
+            .tarjeta {
+                background-color: white;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            }
+
+            h1 {
+                color: #b42318;
+                font-size: 24px;
+                margin-bottom: 15px;
+            }
+
+            .btn-principal {
+                background-color: #174a87;
+                border-color: #174a87;
+                color: white;
+            }
+
+            .btn-principal:hover {
+                background-color: #103964;
+                border-color: #103964;
+                color: white;
+            }
+        </style>
+    </head>
+
+    <body>
+        <main class="contenedor">
+            <div class="tarjeta">
+
+                <h1>No se pudo actualizar el reporte</h1>
+
+                <p><?= $mensaje ?></p>
+
+                <a href="<?= $enlace ?>" class="btn btn-principal">
+                    <?= $textoEnlace ?>
+                </a>
+
+                <a href="listar.php" class="btn btn-outline-secondary">
+                    Consultar reportes
+                </a>
+
+            </div>
+        </main>
+    </body>
+    </html>
+    <?php
+    exit;
 }
-// Recibir el ID del reporte
-$id = filter_input(
-    INPUT_POST,
-    "id",
-    FILTER_VALIDATE_INT
-);
-// Recibir los datos modificados
-$nombre = trim($_POST["nombre"] ?? "");
 
-$laboratorio = $_POST["laboratorio"] ?? "";
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    mostrarError('Debes realizar la actualización desde el formulario.', 405);
+}
 
-$equipo = trim($_POST["equipo"] ?? "");
+// Recibir los datos del formulario
+function obtenerCampo(string $campo): string
+{
+    $valor = $_POST[$campo] ?? '';
+    return is_string($valor) ? trim($valor) : '';
+}
 
-$fecha = $_POST["fecha_falla"] ?? "";
-
-$hora = $_POST["hora_falla"] ?? "";
-
-$tipoFalla = $_POST["falla"] ?? "";
-
-$otroProblema = trim(
-    $_POST["otro_problema"] ?? ""
-);
-
-// VALIDAR EL ID
+$id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
 
 if (!$id || $id < 1) {
-
-    http_response_code(400);
-
-    exit("El reporte seleccionado no es válido.");
-
+    mostrarError('No se ha seleccionado un reporte válido.');
 }
-// VALIDAR LOS CAMPOS OBLIGATORIOS
 
+$nombre = obtenerCampo('nombre');
+$laboratorio = obtenerCampo('laboratorio');
+$equipo = obtenerCampo('equipo');
+$fecha = obtenerCampo('fecha_falla');
+$hora = obtenerCampo('hora_falla');
+$tipoFalla = obtenerCampo('falla');
+$otroProblema = obtenerCampo('otro_problema');
+
+// Comprobar que los campos obligatorios estén completos
 if (
-    $nombre === "" ||
-    $laboratorio === "" ||
-    $equipo === "" ||
-    $fecha === "" ||
-    $hora === "" ||
-    $tipoFalla === ""
+    $nombre === '' ||
+    $laboratorio === '' ||
+    $equipo === '' ||
+    $fecha === '' ||
+    $hora === '' ||
+    $tipoFalla === ''
 ) {
-
-    http_response_code(400);
-
-    exit("Debe completar todos los campos obligatorios.");
-
+    mostrarError('Completa todos los campos obligatorios.', 400, $id);
 }
-// VALIDAR LA LONGITUD DE LOS DATOS
 
-if (
-    strlen($nombre) > 100 ||
-    strlen($laboratorio) > 50 ||
-    strlen($equipo) > 30
-) {
-
-    http_response_code(400);
-
-    exit("Uno de los campos supera la longitud permitida.");
-
+if (strlen($nombre) > 100 || strlen($equipo) > 30) {
+    mostrarError(
+        'El nombre o el código del computador supera la longitud permitida.',
+        400,
+        $id
+    );
 }
-// VALIDAR EL LABORATORIO
 
-$laboratoriosValidos = ["1", "2", "3"];
-
-if (!in_array(
-    $laboratorio,
-    $laboratoriosValidos,
-    true
-)) {
-
-    http_response_code(400);
-
-    exit("Seleccione un laboratorio válido.");
-
+if (!in_array($laboratorio, ['1', '2', '3'], true)) {
+    mostrarError('Selecciona un laboratorio válido.', 400, $id);
 }
-// VALIDAR EL TIPO DE FALLA
 
-$tiposValidos = [
-    "encendido",
-    "internet",
-    "teclado",
-    "pantalla",
-    "software",
-    "otro"
+$fallasPermitidas = [
+    'encendido',
+    'internet',
+    'teclado',
+    'pantalla',
+    'software',
+    'otro'
 ];
 
-if (!in_array(
-    $tipoFalla,
-    $tiposValidos,
-    true
-)) {
-
-    http_response_code(400);
-
-    exit("Seleccione un tipo de falla válido.");
-
-}
-// VALIDAR LA OPCIÓN OTRO PROBLEMA
-
-if (
-    $tipoFalla === "otro" &&
-    $otroProblema === ""
-) {
-
-    http_response_code(400);
-
-    exit("Debe describir el otro problema.");
-
+if (!in_array($tipoFalla, $fallasPermitidas, true)) {
+    mostrarError('Selecciona un tipo de falla válido.', 400, $id);
 }
 
-// Si no seleccionó Otro, no guardar texto adicional
-if ($tipoFalla !== "otro") {
-
-    $otroProblema = "";
-
+if ($tipoFalla === 'otro') {
+    if ($otroProblema === '') {
+        mostrarError('Describe el problema del computador.', 400, $id);
+    }
+} else {
+    $otroProblema = '';
 }
-// VALIDAR FECHA Y HORA
 
-$zonaHoraria = new DateTimeZone(
-    "America/Bogota"
-);
+// Validar la fecha y la hora
+$zonaHoraria = new DateTimeZone('America/Bogota');
 
 $fechaHora = DateTimeImmutable::createFromFormat(
-    "!Y-m-d H:i",
-    $fecha . " " . $hora,
+    '!Y-m-d H:i',
+    "$fecha $hora",
     $zonaHoraria
 );
 
 if (
     !$fechaHora ||
-    $fechaHora->format("Y-m-d H:i") !==
-        $fecha . " " . $hora ||
-    $fechaHora > new DateTimeImmutable(
-        "now",
-        $zonaHoraria
-    )
+    $fechaHora->format('Y-m-d H:i') !== "$fecha $hora" ||
+    $fechaHora > new DateTimeImmutable('now', $zonaHoraria)
 ) {
-
-    http_response_code(400);
-
-    exit(
-        "La fecha y la hora ingresadas no son válidas."
+    mostrarError(
+        'La fecha y la hora ingresadas no son válidas.',
+        400,
+        $id
     );
-
 }
-// ACTUALIZAR EL REPORTE EN LA BASE DE DATOS
 
+// Guardar los cambios en la base de datos
 try {
-
-    // Conectarse a la base de datos
     $conexion = conectarBD();
 
-
-    // Comprobar que el reporte exista
     $consulta = $conexion->prepare(
-        "SELECT id FROM reportes WHERE id = :id"
+        'SELECT id FROM reportes WHERE id = :id'
     );
+
+    $consulta->execute([':id' => $id]);
+
+    if (!$consulta->fetchColumn()) {
+        mostrarError('El reporte que intentas modificar no existe.', 404);
+    }
+
+    $sql = 'UPDATE reportes
+            SET nombre = :nombre,
+                laboratorio = :laboratorio,
+                equipo = :equipo,
+                fecha_falla = :fecha,
+                hora_falla = :hora,
+                tipo_falla = :falla,
+                otro_problema = :otro
+            WHERE id = :id';
+
+    $consulta = $conexion->prepare($sql);
 
     $consulta->execute([
-        ":id" => $id
+        ':nombre' => $nombre,
+        ':laboratorio' => $laboratorio,
+        ':equipo' => $equipo,
+        ':fecha' => $fecha,
+        ':hora' => $hora,
+        ':falla' => $tipoFalla,
+        ':otro' => $otroProblema,
+        ':id' => $id
     ]);
 
-    if (!$consulta->fetch(PDO::FETCH_ASSOC)) {
-
-        http_response_code(404);
-
-        exit("No se encontró el reporte solicitado.");
-
-    }
-    // Instrucción SQL para actualizar
-    $sql = "UPDATE reportes SET
-
-                nombre = :nombre,
-
-                laboratorio = :laboratorio,
-
-                equipo = :equipo,
-
-                fecha_falla = :fecha,
-
-                hora_falla = :hora,
-
-                tipo_falla = :tipo_falla,
-
-                otro_problema = :otro_problema
-
-            WHERE id = :id";
-    // Preparar la consulta
-    $sentencia = $conexion->prepare($sql);
-    // Ejecutar la actualización
-    $sentencia->execute([
-
-        ":nombre" => $nombre,
-
-        ":laboratorio" => $laboratorio,
-
-        ":equipo" => $equipo,
-
-        ":fecha" => $fecha,
-
-        ":hora" => $hora,
-
-        ":tipo_falla" => $tipoFalla,
-
-        ":otro_problema" => $otroProblema,
-
-        ":id" => $id
-
-    ]);
-    // Regresar al listado de reportes
-    header("Location: listar.php?actualizado=1");
-
+    header('Location: listar.php?actualizado=1', true, 303);
     exit;
+
 } catch (Throwable $error) {
+    error_log('Error al actualizar el reporte: ' . $error->getMessage());
 
-    http_response_code(503);
-
-    exit(
-        "No fue posible actualizar el reporte. " .
-        "La conexión a la base de datos " .
-        "todavía no está configurada."
+    mostrarError(
+        'Ocurrió un problema al guardar los cambios. Inténtalo nuevamente.',
+        503,
+        $id
     );
-
 }
-
-?>
