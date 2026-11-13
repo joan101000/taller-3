@@ -35,5 +35,16 @@ services:
       timeout: 3s
       retries: 20
 
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   mariadb_datos:

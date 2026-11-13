@@ -1,7 +1,9 @@
 <?php
+// Iniciar la sesión y cargar la conexión
 session_start();
 require_once __DIR__ . '/conexion.php';
 
+// Mostrar mensajes de confirmación o error
 function mostrarMensaje(string $titulo, string $mensaje, bool $correcto = false, int $estado = 200): void
 {
     http_response_code($estado);
@@ -80,7 +82,7 @@ function mostrarMensaje(string $titulo, string $mensaje, bool $correcto = false,
     exit;
 }
 
-// Confirmación después de guardar el reporte
+// Mostrar la confirmación después de guardar
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     if (
@@ -100,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     );
 }
 
+// Comprobar que los datos lleguen desde el formulario
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     mostrarMensaje(
         'Solicitud no permitida',
@@ -109,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     );
 }
 
-// Obtener los valores enviados desde el formulario
+// Recibir los datos del formulario
 function campo(string $nombre): string
 {
     $valor = $_POST[$nombre] ?? '';
@@ -124,7 +127,7 @@ $hora = campo('hora_falla');
 $tipoFalla = campo('falla');
 $otroProblema = campo('otro_problema');
 
-// Revisar los campos obligatorios
+// Validar los campos obligatorios
 if (
     $nombre === '' ||
     $laboratorio === '' ||
@@ -141,6 +144,17 @@ if (
     );
 }
 
+// Validar que el nombre no contenga números
+if (!preg_match("/^[\p{L}]+(?:[ '-][\p{L}]+)*$/u", $nombre)) {
+    mostrarMensaje(
+        'Nombre inválido',
+        'El nombre completo solo debe contener letras, sin números.',
+        false,
+        400
+    );
+}
+
+// Revisar la longitud de los datos
 if (strlen($nombre) > 100 || strlen($equipo) > 30) {
     mostrarMensaje(
         'Datos demasiado largos',
@@ -150,6 +164,7 @@ if (strlen($nombre) > 100 || strlen($equipo) > 30) {
     );
 }
 
+// Validar el laboratorio seleccionado
 if (!in_array($laboratorio, ['1', '2', '3'], true)) {
     mostrarMensaje(
         'Laboratorio inválido',
@@ -159,6 +174,7 @@ if (!in_array($laboratorio, ['1', '2', '3'], true)) {
     );
 }
 
+// Validar el tipo de falla
 $fallasPermitidas = [
     'encendido',
     'internet',
@@ -177,6 +193,7 @@ if (!in_array($tipoFalla, $fallasPermitidas, true)) {
     );
 }
 
+// Comprobar la descripción de otro problema
 if ($tipoFalla === 'otro' && $otroProblema === '') {
     mostrarMensaje(
         'Falta la descripción',
@@ -190,7 +207,7 @@ if ($tipoFalla !== 'otro') {
     $otroProblema = '';
 }
 
-// Verificar la fecha y hora del reporte
+// Validar la fecha y hora
 $zona = new DateTimeZone('America/Bogota');
 
 $fechaHora = DateTimeImmutable::createFromFormat(
@@ -212,7 +229,7 @@ if (
     );
 }
 
-// Registrar la falla en la base de datos
+// Guardar el reporte en la base de datos
 try {
     $conexion = conectarBD();
 

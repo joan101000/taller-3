@@ -1,3 +1,4 @@
+
 <?php
 require_once __DIR__ . '/conexion.php';
 
@@ -23,6 +24,7 @@ $tiposFalla = [
     'otro' => 'Otro problema'
 ];
 
+// Consultar el reporte que se va a editar
 if (!$id || $id < 1) {
     $error = 'No se ha seleccionado un reporte válido.';
 } else {
@@ -53,7 +55,6 @@ $zonaHoraria = new DateTimeZone('America/Bogota');
 $fechaMaxima = (new DateTimeImmutable('now', $zonaHoraria))
     ->format('Y-m-d');
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -237,11 +238,12 @@ $fechaMaxima = (new DateTimeImmutable('now', $zonaHoraria))
                            name="nombre"
                            class="form-control"
                            maxlength="100"
+                           pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+([ '-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*"
                            value="<?= escapar($reporte['nombre']) ?>"
                            required>
 
-                    <div class="invalid-feedback">
-                        Escribe tu nombre completo.
+                    <div class="invalid-feedback" id="mensajeNombre">
+                        El nombre no puede contener números ni caracteres no permitidos.
                     </div>
                 </div>
 
@@ -410,6 +412,28 @@ $fechaMaxima = (new DateTimeImmutable('now', $zonaHoraria))
             const falla = document.getElementById('falla');
             const campoOtro = document.getElementById('campoOtro');
             const otroProblema = document.getElementById('otro_problema');
+            const mensajeNombre = document.getElementById('mensajeNombre');
+
+            // Validar el nombre mientras se escribe
+            function validarNombre() {
+                const nombreEscrito = nombre.value.trim();
+                const nombreValido = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+([ '-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/.test(nombreEscrito);
+
+                if (nombre.value === '') {
+                    nombre.setCustomValidity('Escribe tu nombre completo.');
+                    mensajeNombre.textContent = 'Escribe tu nombre completo.';
+                    nombre.classList.remove('is-invalid');
+                } else if (!nombreValido) {
+                    nombre.setCustomValidity('El nombre contiene caracteres no permitidos.');
+                    nombre.classList.add('is-invalid');
+                    mensajeNombre.textContent = 'El nombre no puede contener números ni caracteres no permitidos.';
+                } else {
+                    nombre.setCustomValidity('');
+                    nombre.classList.remove('is-invalid');
+                }
+            }
+
+            nombre.addEventListener('input', validarNombre);
 
             function fechaActual() {
                 const hoy = new Date();
@@ -457,10 +481,6 @@ $fechaMaxima = (new DateTimeImmutable('now', $zonaHoraria))
             fecha.addEventListener('change', validarFechaHora);
             hora.addEventListener('change', validarFechaHora);
 
-            nombre.addEventListener('input', function() {
-                nombre.setCustomValidity('');
-            });
-
             equipo.addEventListener('input', function() {
                 equipo.setCustomValidity('');
             });
@@ -473,12 +493,12 @@ $fechaMaxima = (new DateTimeImmutable('now', $zonaHoraria))
                 nombre.value = nombre.value.trim();
                 equipo.value = equipo.value.trim();
 
-                nombre.setCustomValidity(
-                    nombre.value === '' ? 'Escribe tu nombre.' : ''
-                );
+                validarNombre();
 
                 equipo.setCustomValidity(
-                    equipo.value === '' ? 'Ingresa el código del computador.' : ''
+                    equipo.value === ''
+                        ? 'Ingresa el código del computador.'
+                        : ''
                 );
 
                 if (falla.value === 'otro') {
@@ -507,6 +527,8 @@ $fechaMaxima = (new DateTimeImmutable('now', $zonaHoraria))
                 }
             });
 
+            // Revisar también el nombre cargado desde MariaDB
+            validarNombre();
             actualizarCampoOtro();
         </script>
     <?php endif; ?>

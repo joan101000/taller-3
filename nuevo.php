@@ -72,7 +72,6 @@
             box-shadow: 0 0 0 3px rgba(23, 74, 135, 0.15);
         }
 
-        /* Los campos correctos conservan su apariencia normal. */
         .was-validated .form-control:valid,
         .was-validated .form-select:valid {
             border-color: #dee2e6;
@@ -164,10 +163,11 @@
                        placeholder="Escribe tu nombre y apellido"
                        maxlength="100"
                        autocomplete="name"
+                       pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+([ '-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*"
                        required>
 
-                <div class="invalid-feedback">
-                    Escribe tu nombre completo.
+                <div class="invalid-feedback" id="mensajeNombre">
+                    El nombre no puede contener números ni caracteres no permitidos.
                 </div>
             </div>
 
@@ -309,7 +309,8 @@
                     Guardar reporte
                 </button>
 
-                <button type="reset" class="btn btn-secondary">
+                <button type="button" class="btn btn-secondary"
+                        data-bs-toggle="modal" data-bs-target="#modalLimpiar">
                     Limpiar formulario
                 </button>
 
@@ -320,6 +321,38 @@
         </form>
     </main>
 
+    <!-- Confirmar limpieza del formulario -->
+    <div class="modal fade" id="modalLimpiar" tabindex="-1"
+         aria-labelledby="tituloModalLimpiar" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="tituloModalLimpiar">
+                        Limpiar formulario
+                    </h2>
+                    <button type="button" class="btn-close"
+                            data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Deseas borrar toda la información que escribiste en el formulario?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button type="button" class="btn btn-danger"
+                            id="confirmarLimpiar" data-bs-dismiss="modal">
+                        Sí, limpiar formulario
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         const formulario = document.getElementById('formularioReporte');
         const nombre = document.getElementById('nombre');
@@ -329,6 +362,27 @@
         const falla = document.getElementById('falla');
         const campoOtro = document.getElementById('campoOtro');
         const otroProblema = document.getElementById('otro_problema');
+        const mensajeNombre = document.getElementById('mensajeNombre');
+
+        // Validar el nombre mientras se escribe
+        function validarNombre() {
+            const caracteresInvalidos = /[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ '-]/;
+            const tieneError = caracteresInvalidos.test(nombre.value);
+
+            if (tieneError) {
+                nombre.setCustomValidity('El nombre contiene caracteres no permitidos.');
+                nombre.classList.add('is-invalid');
+                mensajeNombre.textContent = 'El nombre no puede contener números ni caracteres no permitidos.';
+            } else {
+                nombre.setCustomValidity('');
+                nombre.classList.remove('is-invalid');
+                mensajeNombre.textContent = nombre.value.trim() === ''
+                    ? 'Escribe tu nombre completo.'
+                    : 'Escribe un nombre válido.';
+            }
+        }
+
+        nombre.addEventListener('input', validarNombre);
 
         function fechaActual() {
             const hoy = new Date();
@@ -381,6 +435,8 @@
             nombre.value = nombre.value.trim();
             equipo.value = equipo.value.trim();
 
+            validarNombre();
+
             if (falla.value === 'otro') {
                 otroProblema.value = otroProblema.value.trim();
                 otroProblema.setCustomValidity(
@@ -412,17 +468,18 @@
             otroProblema.setCustomValidity('');
         });
 
-        formulario.addEventListener('reset', function(evento) {
-            const confirmar = confirm(
-                '¿Deseas borrar toda la información del formulario?'
-            );
+        // Limpiar los campos después de confirmar
+        document.getElementById('confirmarLimpiar').addEventListener('click', function() {
+            formulario.reset();
+        });
 
-            if (!confirmar) {
-                evento.preventDefault();
-                return;
-            }
-
+        formulario.addEventListener('reset', function() {
             formulario.classList.remove('was-validated');
+
+            nombre.setCustomValidity('');
+            nombre.classList.remove('is-invalid');
+            mensajeNombre.textContent = 'Escribe tu nombre completo.';
+
             hora.setCustomValidity('');
             otroProblema.setCustomValidity('');
 

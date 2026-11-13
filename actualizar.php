@@ -1,4 +1,5 @@
 <?php
+// Conexión a la base de datos
 require_once __DIR__ . '/conexion.php';
 
 function mostrarError(string $mensaje, int $estado = 400, int $id = 0): void
@@ -108,7 +109,7 @@ $hora = obtenerCampo('hora_falla');
 $tipoFalla = obtenerCampo('falla');
 $otroProblema = obtenerCampo('otro_problema');
 
-// Comprobar que los campos obligatorios estén completos
+// Validar la información
 if (
     $nombre === '' ||
     $laboratorio === '' ||
@@ -153,7 +154,6 @@ if ($tipoFalla === 'otro') {
     $otroProblema = '';
 }
 
-// Validar la fecha y la hora
 $zonaHoraria = new DateTimeZone('America/Bogota');
 
 $fechaHora = DateTimeImmutable::createFromFormat(
@@ -174,7 +174,7 @@ if (
     );
 }
 
-// Guardar los cambios en la base de datos
+// Actualizar el reporte en MariaDB
 try {
     $conexion = conectarBD();
 

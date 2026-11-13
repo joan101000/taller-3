@@ -1,4 +1,5 @@
 <?php
+// Conexión a la base de datos
 session_start();
 require_once __DIR__ . '/conexion.php';
 
@@ -70,7 +71,7 @@ function mostrarError(string $mensaje, int $estado = 400): void
     exit;
 }
 
-// La eliminación solo se permite desde un formulario POST.
+// Validar la solicitud
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     mostrarError(
         'Debes seleccionar un reporte desde la lista para eliminarlo.',
@@ -78,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     );
 }
 
-// Verificar que la solicitud provenga del formulario.
 $tokenRecibido = $_POST['csrf_token'] ?? '';
 $tokenSesion = $_SESSION['csrf_token'] ?? '';
 
@@ -94,13 +94,14 @@ if (
     );
 }
 
-// Identificar el reporte seleccionado.
+// Identificar el reporte
 $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
 
 if (!$id || $id < 1) {
     mostrarError('El reporte seleccionado no es válido.', 400);
 }
 
+// Eliminar el reporte de MariaDB
 try {
     $conexion = conectarBD();
 
@@ -112,7 +113,6 @@ try {
         ':id' => $id
     ]);
 
-    // Verificar que realmente se haya eliminado un registro.
     if ($consulta->rowCount() === 0) {
         mostrarError(
             'No se encontró el reporte. Es posible que ya haya sido eliminado.',
@@ -120,7 +120,6 @@ try {
         );
     }
 
-    // Renovar el token para las siguientes operaciones.
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
     header('Location: listar.php?eliminado=1', true, 303);
